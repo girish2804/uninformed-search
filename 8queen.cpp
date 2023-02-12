@@ -1,129 +1,113 @@
-#include <bits/stdc++.h>
-#include <queue>
-#include <string>
+#include<bits/stdc++.h>
+#include<vector>
+#include<queue>
 using namespace std;
 
 #define N 8
+int sol;
+int cnt;
 
-vector<vector<string>> goals; //initializing list of goals and non-attacking states
-vector<vector<string>> non_attacking_states;
-int sol=0;
-int cnt = 1;
+struct state{
+    int board[N][N];
+    vector<state> next;
+};
 
-//function to print the board
-void print(vector<string>& state){
-	for (auto& str : state){
-		for (auto& letter : str){
-            cout << letter << " ";
-        }
-		cout << endl;
-	}
-	return;
-}
-
-//function to check if a state is safe(non-attacking)
-bool safe(int r, int c, vector<string>& board){
-    for(int i=0;i<board.size();i++){
-        if(board[i][c] == 'Q'){
+bool safe(struct state* a, int col, int row){
+    for(int i=0;i<N;i++){
+        if(a->board[i][col]){
             return false;
         }
     }
+    int j = col;
+    int i = row;
 
-	int i = r; 
-    int j = c;
-	while(i >= 0 && j >= 0){
-        if(board[i--][j--] == 'Q'){
+    while(i>=0 && j>=0){
+        if(a->board[i--][j--]){
             return false;
         }
     }
-			
-	i = r;
-    j = c;
-	while(i >= 0 && j < board.size()){
-        if(board[i--][j++] == 'Q'){
-            return false;
-        }
-    }	
-	return true;
-}
-
-bool goal(vector<string> state, int r){    
-    if(r == N ){
-        return true;
-    }
-    return false;
-}
-
-//function to get list of succeeding states
-vector<vector<string>> succ(vector<string> state, int r){
-    vector<string> str;
-    vector<vector<string>> succ_states; //list containing succeeding safe states
-    for(int i = 0; i < N; i++){
-        str = state;
-        if(safe(r, i, state)){
-            str[r][i] = 'Q';
-            succ_states.push_back(str);
-            cnt++;
-            non_attacking_states.push_back(str);
-        }
-    }
-    return succ_states;
-}
-
-void search_tree(vector<string>& state, int r){
-    queue<vector<string>> open;    
-    queue<int> row;      
-    vector<vector<string>> succ_state;
     
-    if(!goal(state, r)){
-        open.push(state);
-        row.push(r);
-    }
-
-    // creating the search tree
-    vector<string> s;
-    while(open.size()){   
-        // breadth-first search
-        s = open.front();   
-        open.pop();
-        if(goal(s, row.front())){
-            sol++;
-            goals.push_back(s);
+    i = row;
+    j = col;
+    while(i>=0 && j<N){
+        if(a->board[i--][j++]){
+            return false;
         }
+    }
+    return true;
+}
+
+void display(struct state a){
+    for(int i=0;i<N;i++){
+        for(int j=0;j<N;j++){
+            if(a.board[i][j]==1){
+                cout<<"Q ";
+            }
+            else{
+                cout<<". ";
+            }
+        }
+        cout<<endl;
+    }
+    cout<<endl;
+}
+
+// function that returns the vector of next nodes of graph
+vector<state> get_nxt(struct state a, int row){
+    vector<state> x;
+    for(int i=0;i<N;i++){
+        state *ad = new struct state;
+        for(int k=0;k<N;k++){
+            for(int j=0;j<N;j++){
+                ad->board[k][j] = a.board[k][j];
+            }
+        }
+        if(safe(ad,i,row)){
+            ad->board[row][i] = 1;
+            cnt++;
+            x.push_back(*ad);
+        }
+        free(ad);
+    }
+    return x;
+}
+
+void search(state a){
+    int r = 0;
+    queue<int> row;
+    queue<state> st;
+    st.push(a);
+    row.push(r);
+    while(!st.empty()){
+        state s = st.front();
+        if(row.front() == N){
+            sol++;
+            display(s);
+        }
+        st.pop();
         r = row.front();
         row.pop();
-        if(r < N){        
-            succ_state = succ(s,r++);  
-            for(int i = 0 ; i < succ_state.size(); i++){
-                open.push(succ_state[i]);
+        if(r<N){
+            vector<state> ne = get_nxt(s,r++);
+            //cout<<ne.size()<<endl;
+            for(auto i = ne.begin();i!=ne.end();i++){
+                st.push(*i);
                 row.push(r);
             }
         }
     }
 }
 
-// enter 1 to view all the goal states
-
 int main(){
-    vector<string> state;
-    string s;
-    for(int i = 0 ; i < N ; i++){
-        s += ".";
-    }
-    for(int i = 0; i < N; i++){
-        state.push_back(s);
-    }
-   
-    search_tree(state, 0);
-    int x;
-    cin>>x;
-
-    if(x == 1){
-        for(int i = 0; i < goals.size(); i++){
-        print(goals[i]);
-        cout<<endl;
+    struct state init;
+    for(int i=0;i<N;i++){
+        for(int j=0;j<N;j++){
+            init.board[i][j] = 0;
         }
     }
-    cout<<"no. of solutions :"<<sol<<endl;
-    cout<<"no. of non-attacking states :"<<cnt<<endl;
+    //display(init);
+    cout<<"solution boards are:"<<endl;
+    search(init);
+    cout<<"number of solutions: "<<sol<<endl;
+    cout<<"number of non-attacking states: "<<cnt<<endl;
 }
