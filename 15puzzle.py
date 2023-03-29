@@ -118,19 +118,11 @@ def is_solvable(ins,n):
         for j in range(i+1,n*n):
             if((puzzle[i]>puzzle[j]) and puzzle[i] and puzzle[j]):
                 count += 1
-    if(count%2 == 0):
-        init_parity = 1
-    else:
-        init_parity = 0
     
     for i in range(0,n*n-1):
         for j in range(i+1,n*n):
             if((f[i]>f[j]) and f[i] and f[j]):
                 count2 += 1
-    if(count2%2 == 0):
-        g_parity = 1
-    else:
-        g_parity = 0
     
     gzerorow = f.index(0)//n
     izerorow = puzzle.index(0)//n
