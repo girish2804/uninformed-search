@@ -2,10 +2,10 @@ After running the program, first enter the initial board, then the goal board in
 
 if input puzzle is
 
-1 2 3 4
-7 8 9 10
-5 6 11 12
-0 14 15 13
+1 2 3 4 \n
+7 8 9 10 \n
+5 6 11 12 \n
+0 14 15 13 \n
 
 Then give a single line input as
 1 2 3 4 7 8 9 10 5 6 11 12 0 14 15 13
