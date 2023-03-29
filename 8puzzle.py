@@ -125,31 +125,41 @@ def is_solvable(ins,n):
     
     for i in range(0,n*n-1):
         for j in range(i+1,n*n):
-            if((puzzle[i]>puzzle[j]) and puzzle[i] and puzzle[j]):
-                count += 1
-    if(count%2 == 0):
+            if((f[i]>f[j]) and f[i] and f[j]):
+                count2 += 1
+    if(count2%2 == 0):
         g_parity = 1
     else:
         g_parity = 0
     
-    if n%2!=0 and init_parity!=g_parity:
-        return False
-    else:
+    gzerorow = f.index(0)//n
+    izerorow = puzzle.index(0)//n
+    print(gzerorow)
+    print(izerorow)
+    if (count2%2) == ((count + gzerorow + izerorow)%2):
         return True
-
+    else:
+        return False
 n = 4
 
 # initial = random.sample(range(16),16)
 # initial = [5, 1, 3, 4, 0, 2, 6, 8, 9, 10, 7, 11, 13, 14, 15, 12]
-initial = []
-print('enter initial board row wise \n --input all the numbers in first row then move to next rows)')
-for i in range(0,n*n):
-    initial.append(int(input()))
 
-final = []
-print('enter final board row wise \n --input all the numbers in first row then move to next rows)')
-for i in range(0,n*n):
-    final.append(int(input()))
+print('input instance: \n')
+print('if puzzle looks like \n')
+print('1 2 3 4 \n')
+print('7 8 9 10 \n')
+print('5 6 11 12 \n')
+print('0 14 15 13 \n')
+print('Then input the puzzle as: (0 represents blank)\n')
+print('1 2 3 4 7 8 9 10 5 6 11 12 0 14 15 13 \n')
+
+initial = list(map(int, input('enter elements of initial board in a single line\n').split()))[:n*n]
+
+final = list(map(int, input('enter elements of final board in a single line\n').split()))[:n*n]
+
+# print(initial)
+# print(final)
 
 # print('initial board: \n')
 # display(initial,n)
@@ -158,7 +168,7 @@ root = node(initial,None,None,final)
 # display(final,n)
 
 if initial == final:
-    print('puzzle')
+    print('puzzle is already solve')
 
 if is_solvable(root,n):
     sol = search(initial,n,final)
