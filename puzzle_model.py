@@ -1,5 +1,3 @@
-# puzzle_model.py
-
 from collections import deque
 import numpy as np
 
@@ -22,7 +20,6 @@ class PuzzleNode:
         successors = []
         gap_idx = self.state.index(0)
         
-        # Determine possible moves based on gap position
         valid_moves = []
         if (gap_idx % n) > 0: valid_moves.append('L')
         if (gap_idx % n) < n - 1: valid_moves.append('R')
@@ -82,7 +79,7 @@ def is_solvable(initial_state, goal_state, n):
 # --- Search Algorithms ---
 
 def bfs_search(initial_state, n, goal_state):
-    """Performs Breadth-First Search (BFS). Guaranteed to find the shortest solution."""
+    """Performs Breadth-First Search (BFS)."""
     start_node = PuzzleNode(initial_state, None, None, goal_state)
     q = deque([start_node])
     visited = {tuple(start_node.state)}
@@ -98,9 +95,8 @@ def bfs_search(initial_state, n, goal_state):
                 q.append(successor)
     return None
 
-def dfs_search(initial_state, n, goal_state, limit=40000):
-    """Performs Depth-First Search (DFS). Not optimal, may be very slow.
-       A node limit is included to prevent excessive memory usage."""
+def dfs_search(initial_state, n, goal_state):
+    """Performs Depth-First Search (DFS). Not optimal and can be very slow."""
     start_node = PuzzleNode(initial_state, None, None, goal_state)
     stack = [start_node]
     visited = {tuple(start_node.state)}
@@ -110,34 +106,29 @@ def dfs_search(initial_state, n, goal_state, limit=40000):
         if current_node.is_goal():
             return current_node.get_solution_path(n)
         
-        if len(visited) > limit: continue # Safety break
-
-        for successor in reversed(current_node.generate_successors(n)): # Add to stack in reverse
+        for successor in reversed(current_node.generate_successors(n)):
             if tuple(successor.state) not in visited:
                 visited.add(tuple(successor.state))
                 stack.append(successor)
     return None
 
 def iddfs_search(initial_state, n, goal_state):
-    """Performs Iterative Deepening Depth-First Search (IDDFS). Optimal like BFS."""
+    """Performs Iterative Deepening Depth-First Search (IDDFS)."""
     start_node = PuzzleNode(initial_state, None, None, goal_state)
     
     def dls(node, depth, visited):
         """Depth-Limited Search helper."""
-        if node.is_goal():
-            return node
-        if depth <= 0:
-            return None
+        if node.is_goal(): return node
+        if depth <= 0: return None
         
         visited.add(tuple(node.state))
         for successor in node.generate_successors(n):
             if tuple(successor.state) not in visited:
                 found = dls(successor, depth - 1, visited)
-                if found:
-                    return found
+                if found: return found
         return None
 
-    for depth in range(100): # Iterate with increasing depth limit
+    for depth in range(100):
         visited = set()
         result_node = dls(start_node, depth, visited)
         if result_node:
