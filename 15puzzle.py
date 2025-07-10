@@ -1,171 +1,145 @@
-from queue import Queue
+# puzzle_model.py
+
+from collections import deque
 import numpy as np
-import random
 
-def search(initial, n, goal):
-    start = node(initial,None,None,goal)
-    visited = []
-    if start.goal_():
-        return start.solution()
-    q = Queue()
-    q.put(start)
+class PuzzleNode:
+    """Represents a state (node) in the N-puzzle problem."""
 
-    while q.empty() == False:
-        nd = q.get()
-        visited.append(nd.state)
-        suc = nd.succ(n)
-        for i in suc:
-            if i.state not in visited:
-                #display(i,n)
-                if i.goal_():
-                    return i.solution()
-                q.put(i) 
-    return
+    def __init__(self, state, parent, move, goal_state):
+        self.state = state
+        self.parent = parent
+        self.move = move
+        self.goal_state = goal_state
+        self.depth = parent.depth + 1 if parent else 0
 
-def nxt(gap,n):
-    available_moves = ['L','R','U','D']
-    if (gap % n) == 0:
-        available_moves.remove('L')
-    if gap % n == n-1:
-        available_moves.remove('R')
-    if gap - n < 0:
-        available_moves.remove('U')
-    if (gap + n) > (n*n - 1):
-        available_moves.remove('D')
-    
-    return available_moves
+    def is_goal(self):
+        """Check if the current state is the goal state."""
+        return self.state == self.goal_state
 
-class node:
-    goal = []
-    state = []
-
-    def solution(self):
-        sol = []
-        sol.append(display(self,n))
-        sol.append(self.prev_move)
-        x = self
-        while x.parent != None:
-            x= x.parent
-            sol.append(display(x,n))
-            sol.append(x.prev_move)
-        sol.pop()
-        sol.reverse()
-        return sol
-    
-    def set_goal(self,g):
-        self.goal = g
-
-    def __init__(self,st,prev_mov,par,final):
-        self.state = st
-        self.prev_move = prev_mov
-        self.parent = par
-        self.goal = final
-
-    def goal_(self):
-        if self.state == self.goal:
-            return True
-        else:
-            return False
-    
-    def path(self):
-        pat = []
-        pat.append()
-    
-    def succ(self, n):
+    def generate_successors(self, n):
+        """Generates all valid successor nodes from the current node."""
         successors = []
         gap_idx = self.state.index(0)
-        moves = nxt(gap_idx,n)
+        
+        # Determine possible moves based on gap position
+        valid_moves = []
+        if (gap_idx % n) > 0: valid_moves.append('L')
+        if (gap_idx % n) < n - 1: valid_moves.append('R')
+        if (gap_idx // n) > 0: valid_moves.append('U')
+        if (gap_idx // n) < n - 1: valid_moves.append('D')
 
-        for i in moves:
-            new = self.state.copy()
-            prev = ''
-            if i == 'L':
-                new[gap_idx]=new[gap_idx-1]
-                new[gap_idx-1]=0
-                prev = 'left'
-            elif i == 'R':
-                new[gap_idx]=new[gap_idx+1]
-                new[gap_idx+1]=0
-                prev = 'rigt'
-            elif i == 'U':
-                new[gap_idx]=new[gap_idx-n]
-                new[gap_idx-n]=0
-                prev = 'up'
-            elif i == 'D':
-                new[gap_idx]=new[gap_idx+n]
-                new[gap_idx+n]=0
-                prev = 'down'
-
-            successors.append(node(new,prev,self,self.goal))
+        for move in valid_moves:
+            new_state = self.state[:]
+            if move == 'L':
+                new_state[gap_idx], new_state[gap_idx - 1] = new_state[gap_idx - 1], new_state[gap_idx]
+            elif move == 'R':
+                new_state[gap_idx], new_state[gap_idx + 1] = new_state[gap_idx + 1], new_state[gap_idx]
+            elif move == 'U':
+                new_state[gap_idx], new_state[gap_idx - n] = new_state[gap_idx - n], new_state[gap_idx]
+            elif move == 'D':
+                new_state[gap_idx], new_state[gap_idx + n] = new_state[gap_idx + n], new_state[gap_idx]
+            
+            successors.append(PuzzleNode(new_state, self, move, self.goal_state))
         
         return successors
 
-def display(x,n):
-    res = np.zeros([n,n], dtype=int)
-    for i in range(0,n*n):
-        r = int(i/n)
-        c = i%n
-        res[r][c] = x.state[i]
-    
-    return res
+    def get_solution_path(self, n):
+        """Traces back from the goal node to the start node to find the solution path."""
+        path = []
+        current = self
+        while current is not None:
+            path.append((current.move, format_state(current.state, n)))
+            current = current.parent
+        path.reverse()
+        return path
 
-def is_solvable(ins,n):
-    puzzle = ins.state
-    f = ins.goal
-    count = 0
-    count2 = 0
-    for i in range(0,n*n-1):
-        for j in range(i+1,n*n):
-            if((puzzle[i]>puzzle[j]) and puzzle[i] and puzzle[j]):
-                count += 1
-    
-    for i in range(0,n*n-1):
-        for j in range(i+1,n*n):
-            if((f[i]>f[j]) and f[i] and f[j]):
-                count2 += 1
-    
-    gzerorow = f.index(0)//n
-    izerorow = puzzle.index(0)//n
-    print(gzerorow)
-    print(izerorow)
-    if (count2%2) == ((count + gzerorow + izerorow)%2):
-        return True
+def format_state(state, n):
+    """Converts a state list into a formatted numpy array for display."""
+    return np.array(state).reshape(n, n)
+
+def is_solvable(initial_state, goal_state, n):
+    """Checks if the N-puzzle is solvable using inversion count."""
+    def count_inversions(state):
+        inversions = 0
+        puzzle = [i for i in state if i != 0]
+        for i in range(len(puzzle)):
+            for j in range(i + 1, len(puzzle)):
+                if puzzle[i] > puzzle[j]:
+                    inversions += 1
+        return inversions
+
+    initial_inversions = count_inversions(initial_state)
+    goal_inversions = count_inversions(goal_state)
+
+    if n % 2 != 0:
+        return initial_inversions % 2 == goal_inversions % 2
     else:
-        return False
-n = 4
+        initial_blank_row = initial_state.index(0) // n
+        goal_blank_row = goal_state.index(0) // n
+        return (initial_inversions + initial_blank_row) % 2 == (goal_inversions + goal_blank_row) % 2
 
-# initial = random.sample(range(16),16)
-# initial = [5, 1, 3, 4, 0, 2, 6, 8, 9, 10, 7, 11, 13, 14, 15, 12]
+# --- Search Algorithms ---
 
-print('input instance: \n')
-print('if puzzle looks like \n')
-print('1 2 3 4 \n')
-print('7 8 9 10 \n')
-print('5 6 11 12 \n')
-print('0 14 15 13 \n')
-print('Then input the puzzle as: (0 represents blank)\n')
-print('1 2 3 4 7 8 9 10 5 6 11 12 0 14 15 13 \n')
+def bfs_search(initial_state, n, goal_state):
+    """Performs Breadth-First Search (BFS). Guaranteed to find the shortest solution."""
+    start_node = PuzzleNode(initial_state, None, None, goal_state)
+    q = deque([start_node])
+    visited = {tuple(start_node.state)}
 
-initial = list(map(int, input('enter elements of initial board in a single line\n').split()))[:n*n]
+    while q:
+        current_node = q.popleft()
+        if current_node.is_goal():
+            return current_node.get_solution_path(n)
+        
+        for successor in current_node.generate_successors(n):
+            if tuple(successor.state) not in visited:
+                visited.add(tuple(successor.state))
+                q.append(successor)
+    return None
 
-final = list(map(int, input('enter elements of final board in a single line\n').split()))[:n*n]
+def dfs_search(initial_state, n, goal_state, limit=40000):
+    """Performs Depth-First Search (DFS). Not optimal, may be very slow.
+       A node limit is included to prevent excessive memory usage."""
+    start_node = PuzzleNode(initial_state, None, None, goal_state)
+    stack = [start_node]
+    visited = {tuple(start_node.state)}
 
-# print(initial)
-# print(final)
+    while stack:
+        current_node = stack.pop()
+        if current_node.is_goal():
+            return current_node.get_solution_path(n)
+        
+        if len(visited) > limit: continue # Safety break
 
-# print('initial board: \n')
-# display(initial,n)
-root = node(initial,None,None,final)
-# print('goal board: ')
-# display(final,n)
+        for successor in reversed(current_node.generate_successors(n)): # Add to stack in reverse
+            if tuple(successor.state) not in visited:
+                visited.add(tuple(successor.state))
+                stack.append(successor)
+    return None
 
-if initial == final:
-    print('puzzle is already solve')
+def iddfs_search(initial_state, n, goal_state):
+    """Performs Iterative Deepening Depth-First Search (IDDFS). Optimal like BFS."""
+    start_node = PuzzleNode(initial_state, None, None, goal_state)
+    
+    def dls(node, depth, visited):
+        """Depth-Limited Search helper."""
+        if node.is_goal():
+            return node
+        if depth <= 0:
+            return None
+        
+        visited.add(tuple(node.state))
+        for successor in node.generate_successors(n):
+            if tuple(successor.state) not in visited:
+                found = dls(successor, depth - 1, visited)
+                if found:
+                    return found
+        return None
 
-if is_solvable(root,n):
-    sol = search(initial,n,final)
-    print('solution to the puzzle is:\n')
-    print(*sol, sep = '- \n')
-    print('goal reached')
-else:
-    print('puzzle is not sovable\n')
+    for depth in range(100): # Iterate with increasing depth limit
+        visited = set()
+        result_node = dls(start_node, depth, visited)
+        if result_node:
+            return result_node.get_solution_path(n)
+    return None
