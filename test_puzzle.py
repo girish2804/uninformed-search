@@ -3,14 +3,14 @@ import argparse
 import random
 import numpy as np
 import multiprocessing
-from puzzle_model import bfs_search, dfs_search, iddfs_search, is_solvable
+from puzzle_model import bfs_search, bidirectional_search, iddfs_search, is_solvable
 
 # --- Configuration ---
-SEARCH_ALGORITHMS = {"bfs": bfs_search, "dfs": dfs_search, "iddfs": iddfs_search}
-BENCHMARK_TIMEOUT_SECONDS = 15 # Max time per algorithm on a single puzzle
+SEARCH_ALGORITHMS = {"bfs": bfs_search, "bidi": bidirectional_search, "iddfs": iddfs_search}
+BENCHMARK_TIMEOUT_SECONDS = 15
 
 # --- Puzzle Generation ---
-def generate_solvable_puzzle(goal_state, n, shuffles=10):
+def generate_solvable_puzzle(goal_state, n, shuffles=30):
     state = goal_state[:]
     last_move = None
     for _ in range(shuffles):
@@ -21,23 +21,20 @@ def generate_solvable_puzzle(goal_state, n, shuffles=10):
         if (gap_idx // n) > 0 and last_move != 'D': valid_moves.append('U')
         if (gap_idx // n) < n - 1 and last_move != 'U': valid_moves.append('D')
         move = random.choice(valid_moves)
-        if move == 'L': state[gap_idx], state[gap_idx - 1] = state[gap_idx - 1], state[gap_idx]; last_move = 'L'
-        elif move == 'R': state[gap_idx], state[gap_idx + 1] = state[gap_idx + 1], state[gap_idx]; last_move = 'R'
-        elif move == 'U': state[gap_idx], state[gap_idx - n] = state[gap_idx - n], state[gap_idx]; last_move = 'U'
-        elif move == 'D': state[gap_idx], state[gap_idx + n] = state[gap_idx + n], state[gap_idx]; last_move = 'D'
+        if move == 'L': state[gap_idx], state[gap_idx-1] = state[gap_idx-1], state[gap_idx]; last_move = 'L'
+        elif move == 'R': state[gap_idx], state[gap_idx+1] = state[gap_idx+1], state[gap_idx]; last_move = 'R'
+        elif move == 'U': state[gap_idx], state[gap_idx-n] = state[gap_idx-n], state[gap_idx]; last_move = 'U'
+        elif move == 'D': state[gap_idx], state[gap_idx+n] = state[gap_idx+n], state[gap_idx]; last_move = 'D'
     return state
 
 # --- Worker for Multiprocessing ---
 def solve_puzzle_worker(queue, algo_func, initial_state, n, goal_state):
-    """A worker function that runs a search and puts the result in a queue."""
     solution = algo_func(initial_state, n, goal_state)
     queue.put(solution)
 
 # --- Reporting ---
 def print_solution(solution_path):
-    if not solution_path:
-        print("No solution was found.")
-        return
+    if not solution_path: print("No solution was found."); return
     print(f"\n--- Solution Found in {len(solution_path) - 1} moves ---")
     print(f"Initial State:\n{solution_path[0][1]}")
     print(f"\n--- Goal Reached! ---\nFinal State:\n{solution_path[-1][1]}")
@@ -58,28 +55,20 @@ def print_benchmark_summary(results, num_puzzles):
 # --- Main Execution Logic ---
 def run_benchmark(num_puzzles, n, goal_state):
     results = {name: {'times': [], 'moves': [], 'found': 0} for name in SEARCH_ALGORITHMS}
-
     for i in range(num_puzzles):
         print(f"\n--- Solving Puzzle {i + 1}/{num_puzzles} ---")
         initial_state = generate_solvable_puzzle(goal_state, n)
-
         for name, func in SEARCH_ALGORITHMS.items():
             q = multiprocessing.Queue()
             p = multiprocessing.Process(target=solve_puzzle_worker, args=(q, func, initial_state, n, goal_state))
-            
             start_time = time.perf_counter()
             p.start()
-            p.join(BENCHMARK_TIMEOUT_SECONDS) # Wait for the process with a timeout
-            
+            p.join(BENCHMARK_TIMEOUT_SECONDS)
             if p.is_alive():
-                # Process is still running, so it timed out
-                p.terminate()
-                p.join()
+                p.terminate(); p.join()
                 print(f"{name.upper():<6} -> TIMEOUT")
-                # Record the failure with max time
                 results[name]['times'].append(BENCHMARK_TIMEOUT_SECONDS)
             else:
-                # Process finished on time
                 end_time = time.perf_counter()
                 solution = q.get()
                 if solution:
@@ -89,10 +78,9 @@ def run_benchmark(num_puzzles, n, goal_state):
                     results[name]['times'].append(elapsed_time)
                     results[name]['moves'].append(moves)
                     results[name]['found'] += 1
-                else: # Should not happen if puzzle is solvable and no timeout
+                else:
                     print(f"{name.upper():<6} -> FAILED (No solution found)")
                     results[name]['times'].append(end_time - start_time)
-
     print_benchmark_summary(results, num_puzzles)
 
 def main():
@@ -101,12 +89,12 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--initial', type=int, nargs='+', help='A single initial state to solve.')
     group.add_argument('--benchmark', type=int, metavar='N', help='Run a benchmark on N random puzzles.')
-    parser.add_argument('--goal', type=int, nargs='+', help=f'The goal state (optional).')
-    parser.add_argument('--algorithm', choices=SEARCH_ALGORITHMS.keys(), default='bfs', help="Algorithm for single solve.")
-
+    parser.add_argument('--goal', type=int, nargs='+', help='The goal state (optional).')
+    parser.add_argument('--algorithm', choices=SEARCH_ALGORITHMS.keys(), default='bidi', help="Algorithm for single solve.")
+    
     args = parser.parse_args()
     goal_state = args.goal if args.goal else list(range(1, n*n)) + [0]
-
+    
     if args.benchmark:
         run_benchmark(args.benchmark, n, goal_state)
     else:
@@ -120,5 +108,5 @@ def main():
         print_solution(solution)
 
 if __name__ == "__main__":
-    multiprocessing.freeze_support() # For Windows compatibility
+    multiprocessing.freeze_support()
     main()
