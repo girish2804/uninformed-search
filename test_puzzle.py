@@ -10,7 +10,7 @@ SEARCH_ALGORITHMS = {"bfs": bfs_search, "dfs": dfs_search, "iddfs": iddfs_search
 BENCHMARK_TIMEOUT_SECONDS = 15 # Max time per algorithm on a single puzzle
 
 # --- Puzzle Generation ---
-def generate_solvable_puzzle(goal_state, n, shuffles=30):
+def generate_solvable_puzzle(goal_state, n, shuffles=10):
     state = goal_state[:]
     last_move = None
     for _ in range(shuffles):
