@@ -10,7 +10,7 @@ SEARCH_ALGORITHMS = {"bfs": bfs_search, "bidi": bidirectional_search, "iddfs": i
 BENCHMARK_TIMEOUT_SECONDS = 15
 
 # --- Puzzle Generation ---
-def generate_solvable_puzzle(goal_state, n, shuffles=30):
+def generate_solvable_puzzle(goal_state, n, shuffles=15):
     state = goal_state[:]
     last_move = None
     for _ in range(shuffles):
