@@ -70,13 +70,13 @@ The output will be a final summary table that looks like this:
 
 ```
 ======================================================================
-Benchmark Summary (50 puzzles, 15s timeout per run)
+Benchmark Summary (20 puzzles, 15s timeout per run)
 ======================================================================
-Algorithm  | Avg Time (s)    | Avg Moves    | Goals Found (%)
+Algorithm  | Avg Time (s)    | Avg Moves    | Goals Found (%)     
 ----------------------------------------------------------------------
-BFS        | 0.045182        | 14.50        | 100.0
-BIDI       | 0.001950        | 14.50        | 100.0
-IDDFS      | 0.098331        | 14.50        | 100.0
+BFS        | 0.538233        | 14.50        | 100.0               
+BIDI       | 0.005744        | 13.50        | 100.0               
+IDDFS      | 1.962729        | 15.89        | 90.0                
 ----------------------------------------------------------------------
 ```
 *(Note: As seen in the example, Bidirectional Search is typically much faster than BFS while finding the same optimal path length.)*
